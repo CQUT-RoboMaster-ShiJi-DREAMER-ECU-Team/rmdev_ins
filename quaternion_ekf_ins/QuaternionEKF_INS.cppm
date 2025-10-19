@@ -11,8 +11,6 @@ module;
 #include <cstdint>
 #include <cmath>
 
-#include <functional>
-
 #include "arm_math.h"
 
 #include "kalman_filter.h"
@@ -196,28 +194,20 @@ private:
     void IMU_QuaternionEKF_Update(float gx, float gy, float gz, float ax, float ay, float az, float dt);
 
 private:
-    using KalmanFilterUserFunc = std::function<void(KalmanFilter_t* kf)>;
-
     /**
      * @brief 用于更新线性化后的状态转移矩阵F右上角的一个4x2分块矩阵,稍后用于协方差矩阵P的更新;
      *        并对零漂的方差进行限制,防止过度收敛并限幅防止发散
      *
      * @param kf
      */
-    void IMU_QuaternionEKF_F_Linearization_P_Fading(KalmanFilter_t* kf);
-    KalmanFilterUserFunc binder_IMU_QuaternionEKF_F_Linearization_P_Fading = [this](KalmanFilter_t* kf) {
-        return IMU_QuaternionEKF_F_Linearization_P_Fading(kf);
-    };
+    static void IMU_QuaternionEKF_F_Linearization_P_Fading(KalmanFilter_t* kf);
 
     /**
      * @brief 在工作点处计算观测函数h(x)的Jacobi矩阵H
      *
      * @param kf
      */
-    void IMU_QuaternionEKF_SetH(KalmanFilter_t* kf);
-    KalmanFilterUserFunc binder_IMU_QuaternionEKF_SetH = [this](KalmanFilter_t* kf) {
-        return IMU_QuaternionEKF_SetH(kf);
-    };
+    static void IMU_QuaternionEKF_SetH(KalmanFilter_t* kf);
 
     /**
      * @brief 利用观测值和先验估计得到最优的后验估计
@@ -226,20 +216,14 @@ private:
      *
      * @param kf
      */
-    void IMU_QuaternionEKF_xhatUpdate(KalmanFilter_t* kf);
-    KalmanFilterUserFunc binder_IMU_QuaternionEKF_xhatUpdate = [this](KalmanFilter_t* kf) {
-        return IMU_QuaternionEKF_xhatUpdate(kf);
-    };
+    static void IMU_QuaternionEKF_xhatUpdate(KalmanFilter_t* kf);
 
     /**
      * @brief EKF观测环节,其实就是把数据复制一下
      *
      * @param kf kf类型定义
      */
-    void IMU_QuaternionEKF_Observe(KalmanFilter_t* kf);
-    KalmanFilterUserFunc binder_IMU_QuaternionEKF_Observe = [this](KalmanFilter_t* kf) {
-        return IMU_QuaternionEKF_Observe(kf);
-    };
+    static void IMU_QuaternionEKF_Observe(KalmanFilter_t* kf);
 
     static float invSqrt(float x)
     {
@@ -422,29 +406,12 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Init(float process_n
     QEKF_INS.IMU_QuaternionEKF.xhat_data[2] = 0;
     QEKF_INS.IMU_QuaternionEKF.xhat_data[3] = 0;
 
-    const auto user_func0 = binder_IMU_QuaternionEKF_Observe.target<void (*)(struct kf_t* kf)>();
-    const auto user_func1 = binder_IMU_QuaternionEKF_F_Linearization_P_Fading.target<void (*)(struct kf_t* kf)>();
-    const auto user_func2 = binder_IMU_QuaternionEKF_SetH.target<void (*)(struct kf_t* kf)>();
-    const auto user_func3 = binder_IMU_QuaternionEKF_xhatUpdate.target<void (*)(struct kf_t* kf)>();
-
-    if (user_func0 == nullptr) {
-        EMDEVIF_FATAL_HANDLER("Quaternion EKF INS: Failed to bind user_func0.");
-    }
-    if (user_func1 == nullptr) {
-        EMDEVIF_FATAL_HANDLER("Quaternion EKF INS: Failed to bind user_func1.");
-    }
-    if (user_func2 == nullptr) {
-        EMDEVIF_FATAL_HANDLER("Quaternion EKF INS: Failed to bind user_func2.");
-    }
-    if (user_func3 == nullptr) {
-        EMDEVIF_FATAL_HANDLER("Quaternion EKF INS: Failed to bind user_func3.");
-    }
-
     // 自定义函数初始化,用于扩展或增加kf的基础功能
-    QEKF_INS.IMU_QuaternionEKF.User_Func0_f = *user_func0;
-    QEKF_INS.IMU_QuaternionEKF.User_Func1_f = *user_func1;
-    QEKF_INS.IMU_QuaternionEKF.User_Func2_f = *user_func2;
-    QEKF_INS.IMU_QuaternionEKF.User_Func3_f = *user_func3;
+    QEKF_INS.IMU_QuaternionEKF.User_Func0_f = IMU_QuaternionEKF_Observe;
+    QEKF_INS.IMU_QuaternionEKF.User_Func1_f = IMU_QuaternionEKF_F_Linearization_P_Fading;
+    QEKF_INS.IMU_QuaternionEKF.User_Func2_f = IMU_QuaternionEKF_SetH;
+    QEKF_INS.IMU_QuaternionEKF.User_Func3_f = IMU_QuaternionEKF_xhatUpdate;
+    QEKF_INS.IMU_QuaternionEKF.user_external_arg = this;
 
     // 设定标志位,用自定函数替换kf标准步骤中的SetK(计算增益)以及xhatupdate(后验估计/融合)
     QEKF_INS.IMU_QuaternionEKF.SkipEq3 = true;
@@ -593,6 +560,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Update(float gx,
 template<QuaternionEkfInsScaleType T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_F_Linearization_P_Fading(KalmanFilter_t* kf)
 {
+    auto QEKF_INS = static_cast<Ins<T, InsAlgorithm::QuaternionEKF>*>(kf->user_external_arg)->QEKF_INS;
+
     float q0, q1, q2, q3;
     float qInvNorm;
 
@@ -677,6 +646,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_SetH(KalmanFilter_t*
 template<QuaternionEkfInsScaleType T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFilter_t* kf)
 {
+    auto QEKF_INS = static_cast<Ins<T, InsAlgorithm::QuaternionEKF>*>(kf->user_external_arg)->QEKF_INS;
+
     float q0, q1, q2, q3;
 
     kf->MatStatus = Matrix_Transpose(&kf->H, &kf->HT);  // z|x => x|z
@@ -810,9 +781,11 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
 template<QuaternionEkfInsScaleType T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Observe(KalmanFilter_t* kf)
 {
-    memcpy(IMU_QuaternionEKF_P, kf->P_data, sizeof(IMU_QuaternionEKF_P));
-    memcpy(IMU_QuaternionEKF_K, kf->K_data, sizeof(IMU_QuaternionEKF_K));
-    memcpy(IMU_QuaternionEKF_H, kf->H_data, sizeof(IMU_QuaternionEKF_H));
+    auto self = static_cast<Ins<T, InsAlgorithm::QuaternionEKF>*>(kf->user_external_arg);
+
+    memcpy(self->IMU_QuaternionEKF_P, kf->P_data, sizeof(IMU_QuaternionEKF_P));
+    memcpy(self->IMU_QuaternionEKF_K, kf->K_data, sizeof(IMU_QuaternionEKF_K));
+    memcpy(self->IMU_QuaternionEKF_H, kf->H_data, sizeof(IMU_QuaternionEKF_H));
 }
 
 }  // namespace rmdev
