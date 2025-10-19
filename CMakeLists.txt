@@ -6,7 +6,7 @@ add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC emdevif_core
-    PRIVATE emdevif_compile_options CMSISDSP rmdev_device_model
+    PRIVATE emdevif_compile_options CMSISDSP rmdev_device_model emdevif_timeline
 )
 
 target_sources(${PROJECT_NAME} PUBLIC
