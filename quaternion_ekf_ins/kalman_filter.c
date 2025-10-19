@@ -128,7 +128,12 @@
 
 #include "kalman_filter.h"
 
+#include "stdlib.h"
+
 #include "emdevif/fatal_handler.h"
+
+#define KALMAN_FILTER_MALLOC(size)  malloc(size)
+#define KALMAN_FILTER_FREE_S(block) ((block) != NULL ? (free(block), (block) = NULL, (void)0) : (void)0)
 
 static const uint16_t sizeof_float = sizeof(float);
 
@@ -151,147 +156,186 @@ static void H_K_R_Adjustment(KalmanFilter_t* kf);
  */
 void Kalman_Filter_Init(KalmanFilter_t* kf, uint8_t xhatSize, uint8_t uSize, uint8_t zSize)
 {
-    *kf = (KalmanFilter_t){0};
-
-    kf->xhatSize = xhatSize;
-    kf->uSize = uSize;
-    kf->zSize = zSize;
-
-    kf->MeasurementValidNum = 0;
-
     // measurement flags
-    kf->MeasurementMap = (uint8_t*)user_malloc(sizeof(uint8_t) * zSize);
+    kf->MeasurementMap = (uint8_t*)KALMAN_FILTER_MALLOC(sizeof(uint8_t) * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->MeasurementMap);
     memset(kf->MeasurementMap, 0, sizeof(uint8_t) * zSize);
-    kf->MeasurementDegree = (float*)user_malloc(sizeof_float * zSize);
+    kf->MeasurementDegree = (float*)KALMAN_FILTER_MALLOC(sizeof_float * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->MeasurementDegree);
     memset(kf->MeasurementDegree, 0, sizeof_float * zSize);
-    kf->MatR_DiagonalElements = (float*)user_malloc(sizeof_float * zSize);
+    kf->MatR_DiagonalElements = (float*)KALMAN_FILTER_MALLOC(sizeof_float * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->MatR_DiagonalElements);
     memset(kf->MatR_DiagonalElements, 0, sizeof_float * zSize);
-    kf->StateMinVariance = (float*)user_malloc(sizeof_float * xhatSize);
+    kf->StateMinVariance = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->StateMinVariance);
     memset(kf->StateMinVariance, 0, sizeof_float * xhatSize);
-    kf->temp = (uint8_t*)user_malloc(sizeof(uint8_t) * zSize);
+    kf->temp = (uint8_t*)KALMAN_FILTER_MALLOC(sizeof(uint8_t) * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->temp);
     memset(kf->temp, 0, sizeof(uint8_t) * zSize);
 
     // filter data
-    kf->FilteredValue = (float*)user_malloc(sizeof_float * xhatSize);
+    kf->FilteredValue = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->FilteredValue);
     memset(kf->FilteredValue, 0, sizeof_float * xhatSize);
-    kf->MeasuredVector = (float*)user_malloc(sizeof_float * zSize);
+    kf->MeasuredVector = (float*)KALMAN_FILTER_MALLOC(sizeof_float * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->MeasuredVector);
     memset(kf->MeasuredVector, 0, sizeof_float * zSize);
-    kf->ControlVector = (float*)user_malloc(sizeof_float * uSize);
+    kf->ControlVector = (float*)KALMAN_FILTER_MALLOC(sizeof_float * uSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->ControlVector);
     memset(kf->ControlVector, 0, sizeof_float * uSize);
 
     // xhat x(k|k)
-    kf->xhat_data = (float*)user_malloc(sizeof_float * xhatSize);
+    kf->xhat_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->xhat_data);
     memset(kf->xhat_data, 0, sizeof_float * xhatSize);
-    Matrix_Init(&kf->xhat, kf->xhatSize, 1, (float*)kf->xhat_data);
+    KALMAN_FILTER_Matrix_Init(&kf->xhat, kf->xhatSize, 1, (float*)kf->xhat_data);
 
     // xhatminus x(k|k-1)
-    kf->xhatminus_data = (float*)user_malloc(sizeof_float * xhatSize);
+    kf->xhatminus_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->xhatminus_data);
     memset(kf->xhatminus_data, 0, sizeof_float * xhatSize);
-    Matrix_Init(&kf->xhatminus, kf->xhatSize, 1, (float*)kf->xhatminus_data);
+    KALMAN_FILTER_Matrix_Init(&kf->xhatminus, kf->xhatSize, 1, (float*)kf->xhatminus_data);
 
     if (uSize != 0) {
         // control vector u
-        kf->u_data = (float*)user_malloc(sizeof_float * uSize);
+        kf->u_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * uSize);
         KALMAN_FILTER_CHECK_MALLOC(kf->u_data);
         memset(kf->u_data, 0, sizeof_float * uSize);
-        Matrix_Init(&kf->u, kf->uSize, 1, (float*)kf->u_data);
+        KALMAN_FILTER_Matrix_Init(&kf->u, kf->uSize, 1, (float*)kf->u_data);
     }
 
     // measurement vector z
-    kf->z_data = (float*)user_malloc(sizeof_float * zSize);
+    kf->z_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->z_data);
     memset(kf->z_data, 0, sizeof_float * zSize);
-    Matrix_Init(&kf->z, kf->zSize, 1, (float*)kf->z_data);
+    KALMAN_FILTER_Matrix_Init(&kf->z, kf->zSize, 1, (float*)kf->z_data);
 
     // covariance matrix P(k|k)
-    kf->P_data = (float*)user_malloc(sizeof_float * xhatSize * xhatSize);
+    kf->P_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->P_data);
     memset(kf->P_data, 0, sizeof_float * xhatSize * xhatSize);
-    Matrix_Init(&kf->P, kf->xhatSize, kf->xhatSize, (float*)kf->P_data);
+    KALMAN_FILTER_Matrix_Init(&kf->P, kf->xhatSize, kf->xhatSize, (float*)kf->P_data);
 
     // create covariance matrix P(k|k-1)
-    kf->Pminus_data = (float*)user_malloc(sizeof_float * xhatSize * xhatSize);
+    kf->Pminus_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->Pminus_data);
     memset(kf->Pminus_data, 0, sizeof_float * xhatSize * xhatSize);
-    Matrix_Init(&kf->Pminus, kf->xhatSize, kf->xhatSize, (float*)kf->Pminus_data);
+    KALMAN_FILTER_Matrix_Init(&kf->Pminus, kf->xhatSize, kf->xhatSize, (float*)kf->Pminus_data);
 
     // state transition matrix F FT
-    kf->F_data = (float*)user_malloc(sizeof_float * xhatSize * xhatSize);
+    kf->F_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->F_data);
-    kf->FT_data = (float*)user_malloc(sizeof_float * xhatSize * xhatSize);
+    kf->FT_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->FT_data);
     memset(kf->F_data, 0, sizeof_float * xhatSize * xhatSize);
     memset(kf->FT_data, 0, sizeof_float * xhatSize * xhatSize);
-    Matrix_Init(&kf->F, kf->xhatSize, kf->xhatSize, (float*)kf->F_data);
-    Matrix_Init(&kf->FT, kf->xhatSize, kf->xhatSize, (float*)kf->FT_data);
+    KALMAN_FILTER_Matrix_Init(&kf->F, kf->xhatSize, kf->xhatSize, (float*)kf->F_data);
+    KALMAN_FILTER_Matrix_Init(&kf->FT, kf->xhatSize, kf->xhatSize, (float*)kf->FT_data);
 
     if (uSize != 0) {
         // control matrix B
-        kf->B_data = (float*)user_malloc(sizeof_float * xhatSize * uSize);
+        kf->B_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * uSize);
         KALMAN_FILTER_CHECK_MALLOC(kf->B_data);
         memset(kf->B_data, 0, sizeof_float * xhatSize * uSize);
-        Matrix_Init(&kf->B, kf->xhatSize, kf->uSize, (float*)kf->B_data);
+        KALMAN_FILTER_Matrix_Init(&kf->B, kf->xhatSize, kf->uSize, (float*)kf->B_data);
     }
 
     // measurement matrix H
-    kf->H_data = (float*)user_malloc(sizeof_float * zSize * xhatSize);
+    kf->H_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * zSize * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->H_data);
-    kf->HT_data = (float*)user_malloc(sizeof_float * xhatSize * zSize);
+    kf->HT_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->HT_data);
     memset(kf->H_data, 0, sizeof_float * zSize * xhatSize);
     memset(kf->HT_data, 0, sizeof_float * xhatSize * zSize);
-    Matrix_Init(&kf->H, kf->zSize, kf->xhatSize, (float*)kf->H_data);
-    Matrix_Init(&kf->HT, kf->xhatSize, kf->zSize, (float*)kf->HT_data);
+    KALMAN_FILTER_Matrix_Init(&kf->H, kf->zSize, kf->xhatSize, (float*)kf->H_data);
+    KALMAN_FILTER_Matrix_Init(&kf->HT, kf->xhatSize, kf->zSize, (float*)kf->HT_data);
 
     // process noise covariance matrix Q
-    kf->Q_data = (float*)user_malloc(sizeof_float * xhatSize * xhatSize);
+    kf->Q_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->Q_data);
     memset(kf->Q_data, 0, sizeof_float * xhatSize * xhatSize);
-    Matrix_Init(&kf->Q, kf->xhatSize, kf->xhatSize, (float*)kf->Q_data);
+    KALMAN_FILTER_Matrix_Init(&kf->Q, kf->xhatSize, kf->xhatSize, (float*)kf->Q_data);
 
     // measurement noise covariance matrix R
-    kf->R_data = (float*)user_malloc(sizeof_float * zSize * zSize);
+    kf->R_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * zSize * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->R_data);
     memset(kf->R_data, 0, sizeof_float * zSize * zSize);
-    Matrix_Init(&kf->R, kf->zSize, kf->zSize, (float*)kf->R_data);
+    KALMAN_FILTER_Matrix_Init(&kf->R, kf->zSize, kf->zSize, (float*)kf->R_data);
 
     // kalman gain K
-    kf->K_data = (float*)user_malloc(sizeof_float * xhatSize * zSize);
+    kf->K_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * xhatSize * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->K_data);
     memset(kf->K_data, 0, sizeof_float * xhatSize * zSize);
-    Matrix_Init(&kf->K, kf->xhatSize, kf->zSize, (float*)kf->K_data);
+    KALMAN_FILTER_Matrix_Init(&kf->K, kf->xhatSize, kf->zSize, (float*)kf->K_data);
 
-    kf->S_data = (float*)user_malloc(sizeof_float * kf->xhatSize * kf->xhatSize);
+    kf->S_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * kf->xhatSize * kf->xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->S_data);
-    kf->temp_matrix_data = (float*)user_malloc(sizeof_float * kf->xhatSize * kf->xhatSize);
+    kf->temp_matrix_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * kf->xhatSize * kf->xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->temp_matrix_data);
-    kf->temp_matrix_data1 = (float*)user_malloc(sizeof_float * kf->xhatSize * kf->xhatSize);
+    kf->temp_matrix_data1 = (float*)KALMAN_FILTER_MALLOC(sizeof_float * kf->xhatSize * kf->xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->temp_matrix_data1);
-    kf->temp_vector_data = (float*)user_malloc(sizeof_float * kf->xhatSize);
+    kf->temp_vector_data = (float*)KALMAN_FILTER_MALLOC(sizeof_float * kf->xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->temp_vector_data);
-    kf->temp_vector_data1 = (float*)user_malloc(sizeof_float * kf->xhatSize);
+    kf->temp_vector_data1 = (float*)KALMAN_FILTER_MALLOC(sizeof_float * kf->xhatSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->temp_vector_data1);
-    Matrix_Init(&kf->S, kf->xhatSize, kf->xhatSize, (float*)kf->S_data);
-    Matrix_Init(&kf->temp_matrix, kf->xhatSize, kf->xhatSize, (float*)kf->temp_matrix_data);
-    Matrix_Init(&kf->temp_matrix1, kf->xhatSize, kf->xhatSize, (float*)kf->temp_matrix_data1);
-    Matrix_Init(&kf->temp_vector, kf->xhatSize, 1, (float*)kf->temp_vector_data);
-    Matrix_Init(&kf->temp_vector1, kf->xhatSize, 1, (float*)kf->temp_vector_data1);
+    KALMAN_FILTER_Matrix_Init(&kf->S, kf->xhatSize, kf->xhatSize, (float*)kf->S_data);
+    KALMAN_FILTER_Matrix_Init(&kf->temp_matrix, kf->xhatSize, kf->xhatSize, (float*)kf->temp_matrix_data);
+    KALMAN_FILTER_Matrix_Init(&kf->temp_matrix1, kf->xhatSize, kf->xhatSize, (float*)kf->temp_matrix_data1);
+    KALMAN_FILTER_Matrix_Init(&kf->temp_vector, kf->xhatSize, 1, (float*)kf->temp_vector_data);
+    KALMAN_FILTER_Matrix_Init(&kf->temp_vector1, kf->xhatSize, 1, (float*)kf->temp_vector_data1);
 
     kf->SkipEq1 = 0;
     kf->SkipEq2 = 0;
     kf->SkipEq3 = 0;
     kf->SkipEq4 = 0;
     kf->SkipEq5 = 0;
+}
+
+void Kalman_Filter_DeInit(KalmanFilter_t* kf)
+{
+    KALMAN_FILTER_FREE_S(kf->MeasurementMap);
+    KALMAN_FILTER_FREE_S(kf->MeasurementDegree);
+    KALMAN_FILTER_FREE_S(kf->MatR_DiagonalElements);
+    KALMAN_FILTER_FREE_S(kf->StateMinVariance);
+    KALMAN_FILTER_FREE_S(kf->temp);
+
+    KALMAN_FILTER_FREE_S(kf->FilteredValue);
+    KALMAN_FILTER_FREE_S(kf->MeasuredVector);
+    KALMAN_FILTER_FREE_S(kf->ControlVector);
+
+    KALMAN_FILTER_FREE_S(kf->xhat_data);
+
+    KALMAN_FILTER_FREE_S(kf->xhatminus_data);
+
+    KALMAN_FILTER_FREE_S(kf->u_data);
+
+    KALMAN_FILTER_FREE_S(kf->z_data);
+
+    KALMAN_FILTER_FREE_S(kf->P_data);
+
+    KALMAN_FILTER_FREE_S(kf->Pminus_data);
+
+    KALMAN_FILTER_FREE_S(kf->F_data);
+    KALMAN_FILTER_FREE_S(kf->FT_data);
+
+    KALMAN_FILTER_FREE_S(kf->B_data);
+
+    KALMAN_FILTER_FREE_S(kf->H_data);
+    KALMAN_FILTER_FREE_S(kf->HT_data);
+
+    KALMAN_FILTER_FREE_S(kf->Q_data);
+
+    KALMAN_FILTER_FREE_S(kf->R_data);
+
+    KALMAN_FILTER_FREE_S(kf->K_data);
+
+    KALMAN_FILTER_FREE_S(kf->S_data);
+    KALMAN_FILTER_FREE_S(kf->temp_matrix_data);
+    KALMAN_FILTER_FREE_S(kf->temp_matrix_data1);
+    KALMAN_FILTER_FREE_S(kf->temp_vector_data);
+    KALMAN_FILTER_FREE_S(kf->temp_vector_data1);
+
+    *kf = (KalmanFilter_t){0};
 }
 
 void Kalman_Filter_Measure(KalmanFilter_t* kf)
@@ -314,14 +358,14 @@ void Kalman_Filter_xhatMinusUpdate(KalmanFilter_t* kf)
         if (kf->uSize > 0) {
             kf->temp_vector.numRows = kf->xhatSize;
             kf->temp_vector.numCols = 1;
-            kf->MatStatus = Matrix_Multiply(&kf->F, &kf->xhat, &kf->temp_vector);
+            kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->F, &kf->xhat, &kf->temp_vector);
             kf->temp_vector1.numRows = kf->xhatSize;
             kf->temp_vector1.numCols = 1;
-            kf->MatStatus = Matrix_Multiply(&kf->B, &kf->u, &kf->temp_vector1);
-            kf->MatStatus = Matrix_Add(&kf->temp_vector, &kf->temp_vector1, &kf->xhatminus);
+            kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->B, &kf->u, &kf->temp_vector1);
+            kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->temp_vector, &kf->temp_vector1, &kf->xhatminus);
         }
         else {
-            kf->MatStatus = Matrix_Multiply(&kf->F, &kf->xhat, &kf->xhatminus);
+            kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->F, &kf->xhat, &kf->xhatminus);
         }
     }
 }
@@ -329,51 +373,54 @@ void Kalman_Filter_xhatMinusUpdate(KalmanFilter_t* kf)
 void Kalman_Filter_PminusUpdate(KalmanFilter_t* kf)
 {
     if (!kf->SkipEq2) {
-        kf->MatStatus = Matrix_Transpose(&kf->F, &kf->FT);
-        kf->MatStatus = Matrix_Multiply(&kf->F, &kf->P, &kf->Pminus);
+        kf->MatStatus = KALMAN_FILTER_Matrix_Transpose(&kf->F, &kf->FT);
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->F, &kf->P, &kf->Pminus);
         kf->temp_matrix.numRows = kf->Pminus.numRows;
         kf->temp_matrix.numCols = kf->FT.numCols;
-        kf->MatStatus = Matrix_Multiply(&kf->Pminus, &kf->FT, &kf->temp_matrix);  // temp_matrix = F P(k-1) FT
-        kf->MatStatus = Matrix_Add(&kf->temp_matrix, &kf->Q, &kf->Pminus);
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->Pminus, &kf->FT, &kf->temp_matrix);  // temp_matrix = F P(k-1) FT
+        kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->temp_matrix, &kf->Q, &kf->Pminus);
     }
 }
+
 void Kalman_Filter_SetK(KalmanFilter_t* kf)
 {
     if (!kf->SkipEq3) {
-        kf->MatStatus = Matrix_Transpose(&kf->H, &kf->HT);  // z|x => x|z
+        kf->MatStatus = KALMAN_FILTER_Matrix_Transpose(&kf->H, &kf->HT);  // z|x => x|z
         kf->temp_matrix.numRows = kf->H.numRows;
         kf->temp_matrix.numCols = kf->Pminus.numCols;
-        kf->MatStatus = Matrix_Multiply(&kf->H, &kf->Pminus, &kf->temp_matrix);  // temp_matrix = H·P'(k)
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->H, &kf->Pminus, &kf->temp_matrix);  // temp_matrix = H·P'(k)
         kf->temp_matrix1.numRows = kf->temp_matrix.numRows;
         kf->temp_matrix1.numCols = kf->HT.numCols;
-        kf->MatStatus = Matrix_Multiply(&kf->temp_matrix, &kf->HT, &kf->temp_matrix1);  // temp_matrix1 = H·P'(k)·HT
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix, &kf->HT, &kf->temp_matrix1);  // temp_matrix1 = H·P'(k)·HT
         kf->S.numRows = kf->R.numRows;
         kf->S.numCols = kf->R.numCols;
-        kf->MatStatus = Matrix_Add(&kf->temp_matrix1, &kf->R, &kf->S);  // S = H P'(k) HT + R
-        kf->MatStatus = Matrix_Inverse(&kf->S, &kf->temp_matrix1);      // temp_matrix1 = inv(H·P'(k)·HT + R)
+        kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->temp_matrix1, &kf->R, &kf->S);  // S = H P'(k) HT + R
+        kf->MatStatus = KALMAN_FILTER_Matrix_Inverse(&kf->S, &kf->temp_matrix1);      // temp_matrix1 = inv(H·P'(k)·HT + R)
         kf->temp_matrix.numRows = kf->Pminus.numRows;
         kf->temp_matrix.numCols = kf->HT.numCols;
-        kf->MatStatus = Matrix_Multiply(&kf->Pminus, &kf->HT, &kf->temp_matrix);  // temp_matrix = P'(k)·HT
-        kf->MatStatus = Matrix_Multiply(&kf->temp_matrix, &kf->temp_matrix1, &kf->K);
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->Pminus, &kf->HT, &kf->temp_matrix);  // temp_matrix = P'(k)·HT
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix, &kf->temp_matrix1, &kf->K);
     }
 }
+
 void Kalman_Filter_xhatUpdate(KalmanFilter_t* kf)
 {
     if (!kf->SkipEq4) {
         kf->temp_vector.numRows = kf->H.numRows;
         kf->temp_vector.numCols = 1;
-        kf->MatStatus = Matrix_Multiply(&kf->H, &kf->xhatminus, &kf->temp_vector);  // temp_vector = H xhat'(k)
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->H, &kf->xhatminus, &kf->temp_vector);  // temp_vector = H xhat'(k)
         kf->temp_vector1.numRows = kf->z.numRows;
         kf->temp_vector1.numCols = 1;
         kf->MatStatus =
-            Matrix_Subtract(&kf->z, &kf->temp_vector, &kf->temp_vector1);  // temp_vector1 = z(k) - H·xhat'(k)
+            KALMAN_FILTER_Matrix_Subtract(&kf->z, &kf->temp_vector, &kf->temp_vector1);  // temp_vector1 = z(k) - H·xhat'(k)
         kf->temp_vector.numRows = kf->K.numRows;
         kf->temp_vector.numCols = 1;
         kf->MatStatus =
-            Matrix_Multiply(&kf->K, &kf->temp_vector1, &kf->temp_vector);  // temp_vector = K(k)·(z(k) - H·xhat'(k))
-        kf->MatStatus = Matrix_Add(&kf->xhatminus, &kf->temp_vector, &kf->xhat);
+            KALMAN_FILTER_Matrix_Multiply(&kf->K, &kf->temp_vector1, &kf->temp_vector);  // temp_vector = K(k)·(z(k) - H·xhat'(k))
+        kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->xhatminus, &kf->temp_vector, &kf->xhat);
     }
 }
+
 void Kalman_Filter_P_Update(KalmanFilter_t* kf)
 {
     if (!kf->SkipEq5) {
@@ -381,10 +428,10 @@ void Kalman_Filter_P_Update(KalmanFilter_t* kf)
         kf->temp_matrix.numCols = kf->H.numCols;
         kf->temp_matrix1.numRows = kf->temp_matrix.numRows;
         kf->temp_matrix1.numCols = kf->Pminus.numCols;
-        kf->MatStatus = Matrix_Multiply(&kf->K, &kf->H, &kf->temp_matrix);      // temp_matrix = K(k)·H
+        kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->K, &kf->H, &kf->temp_matrix);      // temp_matrix = K(k)·H
         kf->MatStatus =
-            Matrix_Multiply(&kf->temp_matrix, &kf->Pminus, &kf->temp_matrix1);  // temp_matrix1 = K(k)·H·P'(k)
-        kf->MatStatus = Matrix_Subtract(&kf->Pminus, &kf->temp_matrix1, &kf->P);
+            KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix, &kf->Pminus, &kf->temp_matrix1);  // temp_matrix1 = K(k)·H·P'(k)
+        kf->MatStatus = KALMAN_FILTER_Matrix_Subtract(&kf->Pminus, &kf->temp_matrix1, &kf->P);
     }
 }
 

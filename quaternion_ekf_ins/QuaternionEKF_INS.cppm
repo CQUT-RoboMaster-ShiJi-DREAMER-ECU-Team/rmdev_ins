@@ -650,17 +650,18 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
 
     float q0, q1, q2, q3;
 
-    kf->MatStatus = Matrix_Transpose(&kf->H, &kf->HT);  // z|x => x|z
+    kf->MatStatus = KALMAN_FILTER_Matrix_Transpose(&kf->H, &kf->HT);  // z|x => x|z
     kf->temp_matrix.numRows = kf->H.numRows;
     kf->temp_matrix.numCols = kf->Pminus.numCols;
-    kf->MatStatus = Matrix_Multiply(&kf->H, &kf->Pminus, &kf->temp_matrix);  // temp_matrix = H·P'(k)
+    kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->H, &kf->Pminus, &kf->temp_matrix);  // temp_matrix = H·P'(k)
     kf->temp_matrix1.numRows = kf->temp_matrix.numRows;
     kf->temp_matrix1.numCols = kf->HT.numCols;
-    kf->MatStatus = Matrix_Multiply(&kf->temp_matrix, &kf->HT, &kf->temp_matrix1);  // temp_matrix1 = H·P'(k)·HT
+    kf->MatStatus =
+        KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix, &kf->HT, &kf->temp_matrix1);  // temp_matrix1 = H·P'(k)·HT
     kf->S.numRows = kf->R.numRows;
     kf->S.numCols = kf->R.numCols;
-    kf->MatStatus = Matrix_Add(&kf->temp_matrix1, &kf->R, &kf->S);  // S = H P'(k) HT + R
-    kf->MatStatus = Matrix_Inverse(&kf->S, &kf->temp_matrix1);      // temp_matrix1 = inv(H·P'(k)·HT + R)
+    kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->temp_matrix1, &kf->R, &kf->S);  // S = H P'(k) HT + R
+    kf->MatStatus = KALMAN_FILTER_Matrix_Inverse(&kf->S, &kf->temp_matrix1);  // temp_matrix1 = inv(H·P'(k)·HT + R)
 
     q0 = kf->xhatminus_data[0];
     q1 = kf->xhatminus_data[1];
@@ -682,20 +683,24 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
     // 利用加速度计数据修正
     kf->temp_vector1.numRows = kf->z.numRows;
     kf->temp_vector1.numCols = 1;
-    kf->MatStatus = Matrix_Subtract(&kf->z, &kf->temp_vector, &kf->temp_vector1);  // temp_vector1 = z(k) - h(xhat'(k))
+    kf->MatStatus = KALMAN_FILTER_Matrix_Subtract(&kf->z,
+                                                  &kf->temp_vector,
+                                                  &kf->temp_vector1);  // temp_vector1 = z(k) - h(xhat'(k))
 
     // chi-square test,卡方检验
     kf->temp_matrix.numRows = kf->temp_vector1.numRows;
     kf->temp_matrix.numCols = 1;
-    kf->MatStatus = Matrix_Multiply(&kf->temp_matrix1,
-                                    &kf->temp_vector1,
-                                    &kf->temp_matrix);  // temp_matrix = inv(H·P'(k)·HT + R)·(z(k) - h(xhat'(k)))
+    kf->MatStatus =
+        KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix1,
+                                      &kf->temp_vector1,
+                                      &kf->temp_matrix);  // temp_matrix = inv(H·P'(k)·HT + R)·(z(k) - h(xhat'(k)))
     kf->temp_vector.numRows = 1;
     kf->temp_vector.numCols = kf->temp_vector1.numRows;
-    kf->MatStatus = Matrix_Transpose(&kf->temp_vector1, &kf->temp_vector);  // temp_vector = z(k) - h(xhat'(k))'
+    kf->MatStatus =
+        KALMAN_FILTER_Matrix_Transpose(&kf->temp_vector1, &kf->temp_vector);  // temp_vector = z(k) - h(xhat'(k))'
     kf->temp_matrix.numRows = 1;
     kf->temp_matrix.numCols = 1;
-    kf->MatStatus = Matrix_Multiply(&kf->temp_vector, &kf->temp_vector1, &kf->temp_matrix);
+    kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->temp_vector, &kf->temp_vector1, &kf->temp_matrix);
 
     QEKF_INS.ChiSquare = kf->temp_matrix.pData[0];  // e(k)'*inv(D(k))*e(k) , scalar
     // rk is small,filter converged/converging
@@ -743,8 +748,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
     // cal kf-gain K
     kf->temp_matrix.numRows = kf->Pminus.numRows;
     kf->temp_matrix.numCols = kf->HT.numCols;
-    kf->MatStatus = Matrix_Multiply(&kf->Pminus, &kf->HT, &kf->temp_matrix);  // temp_matrix = P'(k)·HT
-    kf->MatStatus = Matrix_Multiply(&kf->temp_matrix, &kf->temp_matrix1, &kf->K);
+    kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->Pminus, &kf->HT, &kf->temp_matrix);  // temp_matrix = P'(k)·HT
+    kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix, &kf->temp_matrix1, &kf->K);
 
     // implement adaptive
     for (uint8_t i = 0; i < kf->K.numRows * kf->K.numCols; i++) {
@@ -758,8 +763,9 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
 
     kf->temp_vector.numRows = kf->K.numRows;
     kf->temp_vector.numCols = 1;
-    kf->MatStatus =
-        Matrix_Multiply(&kf->K, &kf->temp_vector1, &kf->temp_vector);  // temp_vector = K(k)·(z(k) - H·xhat'(k))
+    kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->K,
+                                                  &kf->temp_vector1,
+                                                  &kf->temp_vector);  // temp_vector = K(k)·(z(k) - H·xhat'(k))
 
     // 零漂修正限幅,一般不会有过大的漂移
     if (QEKF_INS.ConvergeFlag) {
@@ -775,7 +781,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
 
     // 不修正yaw轴数据
     kf->temp_vector.pData[3] = 0;
-    kf->MatStatus = Matrix_Add(&kf->xhatminus, &kf->temp_vector, &kf->xhat);
+    kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->xhatminus, &kf->temp_vector, &kf->xhat);
 }
 
 template<QuaternionEkfInsScaleType T>
