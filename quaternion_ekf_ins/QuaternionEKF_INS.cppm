@@ -166,8 +166,7 @@ private:
     float imuParamCorrection_lastYawOffset{};
     float imuParamCorrection_lastPitchOffset{};
     float imuParamCorrection_lastRollOffset{};
-
-    float c_11{}, c_12{}, c_13{}, c_21{}, c_22{}, c_23{}, c_31{}, c_32{}, c_33{};
+    float imuParamCorrection_c[3][3]{};
 
     /**
      * @brief reserved.用于修正IMU安装误差与标度因数误差,即陀螺仪轴和云台轴的安装偏移
@@ -326,6 +325,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::insUpdate(rmdev::Imu<ScaleType>& curre
     current_imu_data.yaw = QEKF_INS.Yaw;
     current_imu_data.pitch = QEKF_INS.Pitch;
     current_imu_data.roll = QEKF_INS.Roll;
+    current_imu_data.yaw_total_angle = QEKF_INS.YawTotalAngle;
 }
 
 template<QuaternionEkfInsScaleType T>
@@ -355,6 +355,19 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::deInit()
 template<QuaternionEkfInsScaleType T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_Param_Correction(IMU_Param_t* param, float gyro[3], float accel[3])
 {
+    auto c = [this](const std::size_t row, const std::size_t col) noexcept -> ScaleType& {
+        return imuParamCorrection_c[row - 1][col - 1];
+    };
+    auto& c_11{c(1, 1)};
+    auto& c_12{c(1, 2)};
+    auto& c_13{c(1, 3)};
+    auto& c_21{c(2, 1)};
+    auto& c_22{c(2, 2)};
+    auto& c_23{c(2, 3)};
+    auto& c_31{c(3, 1)};
+    auto& c_32{c(3, 2)};
+    auto& c_33{c(3, 3)};
+
     float cosPitch, cosYaw, cosRoll, sinPitch, sinYaw, sinRoll;
 
     if (fabsf(param->Yaw - imuParamCorrection_lastYawOffset) > 0.001f ||
