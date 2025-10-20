@@ -1,6 +1,5 @@
 /**
  * @file ins.cppm
- * @module rmdev.ins
  * @author DuYicheng
  * @date 2025-10-18
  * @brief 姿态解算模块

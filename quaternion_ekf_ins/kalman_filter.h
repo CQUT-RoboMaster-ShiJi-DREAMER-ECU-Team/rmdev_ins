@@ -1,17 +1,15 @@
 /**
  ******************************************************************************
  * @file    kalman_filter.h
- * @author  Wang Hongxi
+ * @author  Wang Hongxi, DuYicheng
  * @version V1.2.2
  * @date    2022/1/8
- * @brief
- ******************************************************************************
- * @attention
- *
- ******************************************************************************
+ * @brief   C implementation of kalman filter
+ * @attention 目前这个文件内的函数仅供 rmdev_ins 模块内部使用
  */
-#ifndef __KALMAN_FILTER_H
-#define __KALMAN_FILTER_H
+
+#ifndef KALMAN_FILTER_H
+#define KALMAN_FILTER_H
 
 #include "arm_math.h"
 #include "stdint.h"
@@ -113,4 +111,4 @@ float* Kalman_Filter_Update(KalmanFilter_t* kf);
 
 EMDEVIF_EXTERN_C_END
 
-#endif  //__KALMAN_FILTER_H
+#endif  // KALMAN_FILTER_H

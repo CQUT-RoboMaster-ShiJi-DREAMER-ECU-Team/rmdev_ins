@@ -1,10 +1,13 @@
 /**
  * @file QuaternionEKF_INS.cppm
- * @author DuYicheng
+ * @author Wang Hongxi, DuYicheng
  * @date 2025-10-18
  * @brief 姿态解算模块 - 基于四元数扩展卡尔曼滤波的姿态更新算法
- *（Wang Hongxi, https://github.com/WangHongxi2001/RoboMaster-C-Board-INS-Example）
+ * 参考（Wang Hongxi, https://github.com/WangHongxi2001/RoboMaster-C-Board-INS-Example）
  */
+
+// ReSharper disable CppJoinDeclarationAndAssignment
+// ReSharper disable CppDiscardedPostfixOperatorResult
 
 module;
 
@@ -14,7 +17,6 @@ module;
 #include "arm_math.h"
 
 #include "kalman_filter.h"
-#include "emdevif/fatal_handler.h"
 
 export module rmdev.ins:quaternionEkfIns;
 import :base;
@@ -25,14 +27,42 @@ import emdevif.timeline;
 
 export namespace rmdev {
 
+/**
+ * 使用 InsAlgorithm::QuaternionEKF 算法的数据类型概念。
+ * @note 目前这个算法只支持 float 类型。但其他类型一般用不上，如果一定需要其他类型，得把
+ * kalman_filter.c/h 改为 C++ 的，会比较麻烦。所以后续也不考虑支持其他类型。
+ */
 template<typename T>
-concept QuaternionEkfInsScaleType = std::is_same_v<T, float>;  // 暂时只支持 float 类型
+concept QuaternionEkfInsScaleType = std::is_same_v<T, float>;
 
+/**
+ * 姿态解算 - 基于四元数扩展卡尔曼滤波的姿态更新算法
+ * （Wang Hongxi,https://github.com/WangHongxi2001/RoboMaster-C-Board-INS-Example）
+ * 的特化实现
+ * @tparam T 数据类型，目前仅支持 float 类型
+ *
+ * 使用示例：
+ * @code
+ * void insTask(void*)
+ * {
+ *     rmdev::Ins<float, InsAlgorithm::QuaternionEKF> ins;
+ *     rmdev::Imu<float> imu_data;
+ *
+ *     ins.init();  // 需要手动执行初始化
+ *     while (true) {
+ *         // 读取陀螺仪数据，更新 imu_data
+ *         ins.insUpdate(imu_data);  // 执行姿态解算，更新 imu_data
+ *         // ...
+ *     }
+ *     ins.deInit();  // 如果需要销毁 ins，需要手动执行
+ * }
+ * @endcode
+ */
 template<QuaternionEkfInsScaleType T>
 class Ins<T, InsAlgorithm::QuaternionEKF>
 {
 public:
-    using ScaleType = T;
+    using ScaleType = T;  ///< 数据类型
 
 private:
     struct INS_t {
@@ -114,9 +144,23 @@ private:
     static constexpr auto X = 0, Y = 1, Z = 2;
 
 public:
+    /**
+     * 更新姿态解算的数据
+     * @param current_imu_data 当前的 IMU 数据，通过引用返回更新的数据
+     */
     void insUpdate(rmdev::Imu<ScaleType>& current_imu_data);
 
+    /**
+     * 初始化实例（要在构造函数执行后手动调用一次）
+     * @attention 存在阻塞式延时与动态内存分配，不建议频繁调用
+     */
     void init();
+
+    /**
+     * 销毁实例（要在析构函数执行前调用一次）
+     * @attention 存在动态内存分配，不建议频繁调用
+     */
+    void deInit();
 
 private:
     float imuParamCorrection_lastYawOffset{};
@@ -136,20 +180,20 @@ private:
     void IMU_Param_Correction(IMU_Param_t* param, float gyro[3], float accel[3]);
 
     /**
-     * @brief          Transform 3dvector from BodyFrame to EarthFrame
-     * @param[1]       vector in BodyFrame
-     * @param[2]       vector in EarthFrame
-     * @param[3]       quaternion
+     * @brief  Transform 3dvector from BodyFrame to EarthFrame
+     * @param vecBF vector in BodyFrame
+     * @param vecEF vector in EarthFrame
+     * @param q quaternion
      */
-    static void BodyFrameToEarthFrame(const float* vecBF, float* vecEF, float* q);
+    static void BodyFrameToEarthFrame(const float* vecBF, float* vecEF, const float* q);
 
     /**
-     * @brief          Transform 3dvector from EarthFrame to BodyFrame
-     * @param[1]       vector in EarthFrame
-     * @param[2]       vector in BodyFrame
-     * @param[3]       quaternion
+     * @brief Transform 3dvector from EarthFrame to BodyFrame
+     * @param vecEF vector in EarthFrame
+     * @param vecBF vector in BodyFrame
+     * @param q quaternion
      */
-    static void EarthFrameToBodyFrame(const float* vecEF, float* vecBF, float* q);
+    static void EarthFrameToBodyFrame(const float* vecEF, float* vecBF, const float* q);
 
 private:
     /* clang-format off */
@@ -187,9 +231,9 @@ private:
 
     /**
      * @brief Quaternion EKF update
-     * @param[in]       gyro x y z in rad/s
-     * @param[in]       accel x y z in m/s²
-     * @param[in]       update period in s
+     * @param  gx, gy, gz gyro x y z in rad/s
+     * @param  ax, ay, az accel x y z in m/s²
+     * @param  dt update period in s
      */
     void IMU_QuaternionEKF_Update(float gx, float gy, float gz, float ax, float ay, float az, float dt);
 
@@ -301,6 +345,14 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::init()
 }
 
 template<QuaternionEkfInsScaleType T>
+void Ins<T, InsAlgorithm::QuaternionEKF>::deInit()
+{
+    Kalman_Filter_DeInit(&QEKF_INS.IMU_QuaternionEKF);
+
+    *this = {};
+}
+
+template<QuaternionEkfInsScaleType T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_Param_Correction(IMU_Param_t* param, float gyro[3], float accel[3])
 {
     float cosPitch, cosYaw, cosRoll, sinPitch, sinYaw, sinRoll;
@@ -351,7 +403,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_Param_Correction(IMU_Param_t* para
 }
 
 template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::BodyFrameToEarthFrame(const float* vecBF, float* vecEF, float* q)
+void Ins<T, InsAlgorithm::QuaternionEKF>::BodyFrameToEarthFrame(const float* vecBF, float* vecEF, const float* q)
 {
     vecEF[0] = 2.0f * ((0.5f - q[2] * q[2] - q[3] * q[3]) * vecBF[0] + (q[1] * q[2] - q[0] * q[3]) * vecBF[1] +
                        (q[1] * q[3] + q[0] * q[2]) * vecBF[2]);
@@ -364,7 +416,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::BodyFrameToEarthFrame(const float* vec
 }
 
 template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::EarthFrameToBodyFrame(const float* vecEF, float* vecBF, float* q)
+void Ins<T, InsAlgorithm::QuaternionEKF>::EarthFrameToBodyFrame(const float* vecEF, float* vecBF, const float* q)
 {
     vecBF[0] = 2.0f * ((0.5f - q[2] * q[2] - q[3] * q[3]) * vecEF[0] + (q[1] * q[2] + q[0] * q[3]) * vecEF[1] +
                        (q[1] * q[3] - q[0] * q[2]) * vecEF[2]);
@@ -609,6 +661,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_F_Linearization_P_Fa
     }
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 template<QuaternionEkfInsScaleType T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_SetH(KalmanFilter_t* kf)
 {
@@ -752,7 +805,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
     kf->MatStatus = KALMAN_FILTER_Matrix_Multiply(&kf->temp_matrix, &kf->temp_matrix1, &kf->K);
 
     // implement adaptive
-    for (uint8_t i = 0; i < kf->K.numRows * kf->K.numCols; i++) {
+    for (uint16_t i = 0; i < kf->K.numRows * kf->K.numCols; i++) {
         kf->K_data[i] *= QEKF_INS.AdaptiveGainScale;
     }
     for (uint8_t i = 4; i < 6; i++) {
