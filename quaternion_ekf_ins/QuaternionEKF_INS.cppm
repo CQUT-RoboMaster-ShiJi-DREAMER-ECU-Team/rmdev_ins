@@ -146,7 +146,8 @@ private:
 public:
     /**
      * 更新姿态解算的数据
-     * @param current_imu_data 当前的 IMU 数据，通过引用返回更新的数据
+     * @param[in, out] current_imu_data 当前的 IMU 数据，通过引用返回更新的数据
+     * @attention 解算得到的欧拉角单位为角度
      */
     void insUpdate(rmdev::Imu<ScaleType>& current_imu_data);
 
