@@ -158,6 +158,12 @@ static void H_K_R_Adjustment(KalmanFilter_t* kf);
  */
 void Kalman_Filter_Init(KalmanFilter_t* kf, uint8_t xhatSize, uint8_t uSize, uint8_t zSize)
 {
+    kf->xhatSize = xhatSize;
+    kf->uSize = uSize;
+    kf->zSize = zSize;
+
+    kf->MeasurementValidNum = 0;
+
     // measurement flags
     kf->MeasurementMap = (uint8_t*)KALMAN_FILTER_MALLOC(sizeof(uint8_t) * zSize);
     KALMAN_FILTER_CHECK_MALLOC(kf->MeasurementMap);
