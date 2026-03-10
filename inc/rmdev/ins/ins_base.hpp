@@ -1,15 +1,18 @@
 /**
- * @file ins_base.cppm
+ * @file ins_base.hpp
  * @brief 姿态解算模块 - 基本定义
  */
 
-module;
+#pragma once
 
-#include <cstdint>
+#include "emdevif/core/detail/config.hpp"
 
-export module rmdev.ins:base;
+#ifndef EMDEVIF_MODULE_INTERFACE_UNIT
+    #include <cstdint>
+#endif
 
-export namespace rmdev {
+EMDEVIF_MODULE_EXPORT
+namespace rmdev {
 
 /**
  * 姿态解算的算法
@@ -24,7 +27,7 @@ enum class InsAlgorithm : uint_fast8_t {
  * @note 这个空类不进行任何操作，具体实现在根据 @ref algorithm 的偏特化中进行。
  * 特化的版本需要提供以下公有成员：
  *     @arg 类型别名 ScaleType。值始终等于第一个模板参数，即 using ScaleType = T;
- *     @arg 方法 void init() 用于实例初始化
+ *     @arg 方法 emdevif::ErrorCode init() 用于实例初始化
  *     @arg 方法 void deInit() 用于销毁实例
  *     @arg 方法 void insUpdate(rmdev::Imu<ScaleType>& current_imu_data) 用于实现姿态解算数据更新
  * @tparam T 数据类型

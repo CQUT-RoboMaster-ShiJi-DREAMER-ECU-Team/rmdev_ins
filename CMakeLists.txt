@@ -6,15 +6,14 @@ add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC emdevif_core
-    PRIVATE emdevif_compile_options CMSISDSP rmdev_device_model emdevif_timeline
+    PRIVATE emdevif_compile_options rmdev_math rmdev_device_model emdevif_timeline CMSISDSP
 )
 
-target_sources(${PROJECT_NAME} PUBLIC
-    FILE_SET ${PROJECT_NAME}_modules TYPE CXX_MODULES FILES
-        ins.cppm ins_base.cppm
-        quaternion_ekf_ins/QuaternionEKF_INS.cppm
+target_include_directories(${PROJECT_NAME} PUBLIC inc)
+target_sources(${PROJECT_NAME} PRIVATE src/quaternion_ekf_ins/kalman_filter.cpp)
 
-    PRIVATE quaternion_ekf_ins/kalman_filter.c
-    PRIVATE FILE_SET ${PROJECT_NAME}_headers TYPE HEADERS
-        BASE_DIRS quaternion_ekf_ins/ FILES quaternion_ekf_ins/kalman_filter.h
-)
+if (EMDEVIF_USE_CPP_MODULES)
+    target_sources(${PROJECT_NAME} PUBLIC FILE_SET ${PROJECT_NAME}_modules TYPE CXX_MODULES
+        FILES ins.cppm
+    )
+endif ()

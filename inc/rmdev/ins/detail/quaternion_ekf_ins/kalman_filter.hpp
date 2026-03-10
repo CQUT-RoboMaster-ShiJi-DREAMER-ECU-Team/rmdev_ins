@@ -1,6 +1,6 @@
 /**
  ******************************************************************************
- * @file    kalman_filter.h
+ * @file    kalman_filter.hpp
  * @author  Wang Hongxi, DuYicheng
  * @version V1.2.2
  * @date    2022/1/8
@@ -8,23 +8,16 @@
  * @attention 目前这个文件内的函数仅供 rmdev_ins 模块内部使用
  */
 
-#ifndef KALMAN_FILTER_H
-#define KALMAN_FILTER_H
+#ifndef KALMAN_FILTER_HPP
+#define KALMAN_FILTER_HPP
 
-#include "arm_math.h"
-#include "stdint.h"
+#include <cstdint>
 
-#include "emdevif/attributes_and_useful_macros.h"
+#include "emdevif/core/attributes_and_useful_macros.h"
 
-EMDEVIF_EXTERN_C_BEGIN
+#include "rmdev/ins/detail/quaternion_ekf_ins/rmdev_matrix_adapter.hpp"
 
-#define KALMAN_FILTER_MAT              arm_matrix_instance_f32
-#define KALMAN_FILTER_Matrix_Init      arm_mat_init_f32
-#define KALMAN_FILTER_Matrix_Add       arm_mat_add_f32
-#define KALMAN_FILTER_Matrix_Subtract  arm_mat_sub_f32
-#define KALMAN_FILTER_Matrix_Multiply  arm_mat_mult_f32
-#define KALMAN_FILTER_Matrix_Transpose arm_mat_trans_f32
-#define KALMAN_FILTER_Matrix_Inverse   arm_mat_inverse_f32
+namespace rmdev::ins::detail::qekf_ins {
 
 typedef struct kf_t {
     float* FilteredValue;
@@ -109,6 +102,6 @@ void Kalman_Filter_xhatUpdate(KalmanFilter_t* kf);
 void Kalman_Filter_P_Update(KalmanFilter_t* kf);
 float* Kalman_Filter_Update(KalmanFilter_t* kf);
 
-EMDEVIF_EXTERN_C_END
+}  // namespace rmdev::ins::detail::qekf_ins
 
-#endif  // KALMAN_FILTER_H
+#endif  // KALMAN_FILTER_HPP

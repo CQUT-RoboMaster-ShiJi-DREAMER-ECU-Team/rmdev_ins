@@ -1,6 +1,6 @@
 /**
  ******************************************************************************
- * @file    kalman_filter.c
+ * @file    kalman_filter.cpp
  * @author  Wang Hongxi, DuYicheng
  * @version V1.2.2
  * @date    2022/1/8
@@ -128,16 +128,25 @@
  ******************************************************************************
  */
 
-#include "kalman_filter.h"
+// ReSharper disable CppCStyleCast
+// ReSharper disable CppZeroConstantCanBeReplacedWithNullptr
 
-#include <stdlib.h>
+// NOLINTBEGIN(*-use-nullptr)
 
-#include "emdevif/fatal_handler.h"
+#include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
+
+#include <cstdlib>
+
+#include "emdevif/core/fatal_handler.h"
+
+#include "emdevif/core/error_handler.hpp"
 
 #define KALMAN_FILTER_MALLOC(size)  malloc(size)
 #define KALMAN_FILTER_FREE_S(block) ((block) != NULL ? (free(block), (block) = NULL, (void)0) : (void)0)
 
-static const uint16_t sizeof_float = sizeof(float);
+namespace rmdev::ins::detail::qekf_ins {
+
+static constexpr uint16_t sizeof_float = sizeof(float);
 
 static void H_K_R_Adjustment(KalmanFilter_t* kf);
 
@@ -343,7 +352,7 @@ void Kalman_Filter_DeInit(KalmanFilter_t* kf)
     KALMAN_FILTER_FREE_S(kf->temp_vector_data);
     KALMAN_FILTER_FREE_S(kf->temp_vector_data1);
 
-    *kf = (KalmanFilter_t){0};
+    *kf = KalmanFilter_t{};
 }
 
 void Kalman_Filter_Measure(KalmanFilter_t* kf)
@@ -555,3 +564,7 @@ static void H_K_R_Adjustment(KalmanFilter_t* kf)
     kf->K.numCols = kf->MeasurementValidNum;
     kf->z.numRows = kf->MeasurementValidNum;
 }
+
+}  // namespace rmdev::ins::detail::qekf_ins
+
+// NOLINTEND(*-use-nullptr)

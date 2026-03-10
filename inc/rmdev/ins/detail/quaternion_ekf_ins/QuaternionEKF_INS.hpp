@@ -1,5 +1,5 @@
 /**
- * @file QuaternionEKF_INS.cppm
+ * @file QuaternionEKF_INS.hpp
  * @author Wang Hongxi, DuYicheng
  * @date 2025-10-18
  * @brief 姿态解算模块 - 基于四元数扩展卡尔曼滤波的姿态更新算法
@@ -9,31 +9,26 @@
 // ReSharper disable CppJoinDeclarationAndAssignment
 // ReSharper disable CppDiscardedPostfixOperatorResult
 
-module;
+#pragma once
 
-#include <cstdint>
-#include <cmath>
+#include "emdevif/core/detail/config.hpp"
 
-#include "arm_math.h"
+#ifndef EMDEVIF_MODULE_INTERFACE_UNIT
+    #include <cstdint>
+    #include <cmath>
+    #include <cstring>
 
-#include "kalman_filter.h"
+    #include <type_traits>
 
-export module rmdev.ins:quaternionEkfIns;
-import :base;
+    #include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
 
-import emdevif.errorHandler;
-import rmdev.deviceModel.sensor.imu;
-import emdevif.timeline;
+    #include "emdevif/core/error_handler.hpp"
+    #include "emdevif/core/concepts.hpp"
+    #include "emdevif/timeline.hpp"
+#endif
 
-export namespace rmdev {
-
-/**
- * 使用 InsAlgorithm::QuaternionEKF 算法的数据类型概念。
- * @note 目前这个算法只支持 float 类型。但其他类型一般用不上，如果一定需要其他类型，得把
- * kalman_filter.c/h 改为 C++ 的，会比较麻烦。所以后续也不考虑支持其他类型。
- */
-template<typename T>
-concept QuaternionEkfInsScaleType = std::is_same_v<T, float>;
+EMDEVIF_MODULE_EXPORT
+namespace rmdev {
 
 /**
  * 姿态解算 - 基于四元数扩展卡尔曼滤波的姿态更新算法
@@ -58,11 +53,13 @@ concept QuaternionEkfInsScaleType = std::is_same_v<T, float>;
  * }
  * @endcode
  */
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 class Ins<T, InsAlgorithm::QuaternionEKF>
 {
 public:
     using ScaleType = T;  ///< 数据类型
+
+    static_assert(std::is_same_v<T, float>, "This algorithm only support type float yet.");
 
 private:
     struct INS_t {
@@ -86,7 +83,7 @@ private:
 
     struct QEKF_INS_t {
         uint8_t Initialized;
-        KalmanFilter_t IMU_QuaternionEKF;
+        ins::detail::qekf_ins::KalmanFilter_t IMU_QuaternionEKF;
         uint8_t ConvergeFlag;
         uint8_t StableFlag;
         uint64_t ErrorCount;
@@ -155,7 +152,7 @@ public:
      * 初始化实例（要在构造函数执行后手动调用一次）
      * @attention 存在阻塞式延时与动态内存分配，不建议频繁调用
      */
-    void init();
+    emdevif::ErrorCode init();
 
     /**
      * 销毁实例（要在析构函数执行前调用一次）
@@ -244,14 +241,14 @@ private:
      *
      * @param kf
      */
-    static void IMU_QuaternionEKF_F_Linearization_P_Fading(KalmanFilter_t* kf);
+    static void IMU_QuaternionEKF_F_Linearization_P_Fading(ins::detail::qekf_ins::KalmanFilter_t* kf);
 
     /**
      * @brief 在工作点处计算观测函数h(x)的Jacobi矩阵H
      *
      * @param kf
      */
-    static void IMU_QuaternionEKF_SetH(KalmanFilter_t* kf);
+    static void IMU_QuaternionEKF_SetH(ins::detail::qekf_ins::KalmanFilter_t* kf);
 
     /**
      * @brief 利用观测值和先验估计得到最优的后验估计
@@ -260,14 +257,14 @@ private:
      *
      * @param kf
      */
-    static void IMU_QuaternionEKF_xhatUpdate(KalmanFilter_t* kf);
+    static void IMU_QuaternionEKF_xhatUpdate(ins::detail::qekf_ins::KalmanFilter_t* kf);
 
     /**
      * @brief EKF观测环节,其实就是把数据复制一下
      *
      * @param kf kf类型定义
      */
-    static void IMU_QuaternionEKF_Observe(KalmanFilter_t* kf);
+    static void IMU_QuaternionEKF_Observe(ins::detail::qekf_ins::KalmanFilter_t* kf);
 
     static float invSqrt(float x)
     {
@@ -278,7 +275,7 @@ private:
 
 /////////////////////////////////////////////////
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::insUpdate(rmdev::Imu<ScaleType>& current_imu_data)
 {
     constexpr float xb[3] = {1, 0, 0};
@@ -329,8 +326,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::insUpdate(rmdev::Imu<ScaleType>& curre
     current_imu_data.yaw_total_angle = QEKF_INS.YawTotalAngle;
 }
 
-template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::init()
+template<typename T>
+emdevif::ErrorCode Ins<T, InsAlgorithm::QuaternionEKF>::init()
 {
     IMU_Param.scale[X] = 1;
     IMU_Param.scale[Y] = 1;
@@ -343,9 +340,11 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::init()
     IMU_QuaternionEKF_Init(10, 0.001, 10000000, 1, 0);
 
     INS.AccelLPF = 0.0085;
+
+    return emdevif::ErrorCode::Success;
 }
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::deInit()
 {
     Kalman_Filter_DeInit(&QEKF_INS.IMU_QuaternionEKF);
@@ -353,7 +352,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::deInit()
     *this = {};
 }
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_Param_Correction(IMU_Param_t* param, float gyro[3], float accel[3])
 {
     auto c = [this](const std::size_t row, const std::size_t col) noexcept -> ScaleType& {
@@ -416,7 +415,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_Param_Correction(IMU_Param_t* para
     imuParamCorrection_lastRollOffset = param->Roll;
 }
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::BodyFrameToEarthFrame(const float* vecBF, float* vecEF, const float* q)
 {
     vecEF[0] = 2.0f * ((0.5f - q[2] * q[2] - q[3] * q[3]) * vecBF[0] + (q[1] * q[2] - q[0] * q[3]) * vecBF[1] +
@@ -429,7 +428,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::BodyFrameToEarthFrame(const float* vec
                        (0.5f - q[1] * q[1] - q[2] * q[2]) * vecBF[2]);
 }
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::EarthFrameToBodyFrame(const float* vecEF, float* vecBF, const float* q)
 {
     vecBF[0] = 2.0f * ((0.5f - q[2] * q[2] - q[3] * q[3]) * vecEF[0] + (q[1] * q[2] + q[0] * q[3]) * vecEF[1] +
@@ -442,7 +441,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::EarthFrameToBodyFrame(const float* vec
                        (0.5f - q[1] * q[1] - q[2] * q[2]) * vecEF[2]);
 }
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Init(float process_noise1,
                                                                  float process_noise2,
                                                                  float measure_noise,
@@ -489,7 +488,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Init(float process_n
     duration_.update();
 }
 
-template<QuaternionEkfInsScaleType T>
+template<typename T>
 void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Update(float gx,
                                                                    float gy,
                                                                    float gz,
@@ -623,8 +622,9 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Update(float gx,
     QEKF_INS.UpdateCount++;  // 初始化低通滤波用,计数测试用
 }
 
-template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_F_Linearization_P_Fading(KalmanFilter_t* kf)
+template<typename T>
+void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_F_Linearization_P_Fading(
+    ins::detail::qekf_ins::KalmanFilter_t* kf)
 {
     auto QEKF_INS = static_cast<Ins<T, InsAlgorithm::QuaternionEKF>*>(kf->user_external_arg)->QEKF_INS;
 
@@ -676,8 +676,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_F_Linearization_P_Fa
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
-template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_SetH(KalmanFilter_t* kf)
+template<typename T>
+void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_SetH(ins::detail::qekf_ins::KalmanFilter_t* kf)
 {
     float doubleq0, doubleq1, doubleq2, doubleq3;
     /* H
@@ -710,8 +710,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_SetH(KalmanFilter_t*
     kf->H_data[15] = doubleq3;
 }
 
-template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFilter_t* kf)
+template<typename T>
+void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(ins::detail::qekf_ins::KalmanFilter_t* kf)
 {
     auto QEKF_INS = static_cast<Ins<T, InsAlgorithm::QuaternionEKF>*>(kf->user_external_arg)->QEKF_INS;
 
@@ -851,8 +851,8 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(KalmanFil
     kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->xhatminus, &kf->temp_vector, &kf->xhat);
 }
 
-template<QuaternionEkfInsScaleType T>
-void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Observe(KalmanFilter_t* kf)
+template<typename T>
+void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Observe(ins::detail::qekf_ins::KalmanFilter_t* kf)
 {
     auto self = static_cast<Ins<T, InsAlgorithm::QuaternionEKF>*>(kf->user_external_arg);
 
