@@ -18,7 +18,7 @@ module;
 
 export module rmdev.ins;
 
-import rmdev.deviceModel.sensor.imu;
+import rmdev.device_model.sensor.imu;
 import rmdev.matrix;
 import emdevif.core.error_handler;
 import emdevif.core.concepts;

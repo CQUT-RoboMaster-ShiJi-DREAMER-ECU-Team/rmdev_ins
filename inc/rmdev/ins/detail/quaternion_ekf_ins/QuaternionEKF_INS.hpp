@@ -21,6 +21,7 @@
     #include <type_traits>
 
     #include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
+    #include "rmdev/device_model/sensor/imu.hpp"
 
     #include "emdevif/core/error_handler.hpp"
     #include "emdevif/core/concepts.hpp"
