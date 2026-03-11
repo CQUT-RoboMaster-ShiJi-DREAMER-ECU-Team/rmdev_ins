@@ -464,7 +464,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Init(float process_n
     QEKF_INS.accLPFcoef = lpf;
 
     // 初始化矩阵维度信息
-    Kalman_Filter_Init(&QEKF_INS.IMU_QuaternionEKF, 6, 0, 3);
+    ins::detail::qekf_ins::Kalman_Filter_Init(&QEKF_INS.IMU_QuaternionEKF, 6, 0, 3);
 
     // 姿态初始化
     QEKF_INS.IMU_QuaternionEKF.xhat_data[0] = 1;
@@ -591,7 +591,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_Update(float gx,
     QEKF_INS.IMU_QuaternionEKF.R_data[8] = QEKF_INS.R;
 
     // 调用kalman_filter.c封装好的函数,注意几个User_Funcx_f的调用
-    Kalman_Filter_Update(&QEKF_INS.IMU_QuaternionEKF);
+    ins::detail::qekf_ins::Kalman_Filter_Update(&QEKF_INS.IMU_QuaternionEKF);
 
     // 获取融合后的数据,包括四元数和xy零飘值
     QEKF_INS.q[0] = QEKF_INS.IMU_QuaternionEKF.FilteredValue[0];

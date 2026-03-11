@@ -139,7 +139,11 @@
 
 #include "emdevif/core/fatal_handler.h"
 
-#include "emdevif/core/error_handler.hpp"
+#if (defined(EMDEVIF_USE_MODULES) && EMDEVIF_USE_MODULES)
+import emdevif.core.error_handler;
+#else
+    #include "emdevif/core/error_handler.hpp"
+#endif
 
 #define KALMAN_FILTER_MALLOC(size)  malloc(size)
 #define KALMAN_FILTER_FREE_S(block) ((block) != NULL ? (free(block), (block) = NULL, (void)0) : (void)0)
