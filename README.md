@@ -1,16 +1,32 @@
 # rmdev_ins
 
-属于 rmdev 的一个子模块，用于进行姿态解算。
+`rmdev` 姿态解算模块。
 
 ## 依赖
 
-* `emdevif`（包括 `emdevif_timeline`）
-* `rmdev_device_model`
-* `CMSISDSP`
+- `emdevif`（含 `emdevif_timeline`）
+- `rmdev_device_model`
+- `rmdev_math`
+- `CMSISDSP`
 
-## 支持的算法
+## 启用方式
 
-该姿态解算包含一个命名规范（参考 `Ins` 类的注释），在该命名规范下，通过偏特化 `InsAlgorithm` 枚举以实现指定使用哪种算法。
+该模块默认不编译。需在上层 `rmdev` 配置中开启：
 
-1. 基于四元数扩展卡尔曼滤波的姿态更新算法( Wang
-   Hongxi, https://github.com/WangHongxi2001/RoboMaster-C-Board-INS-Example )
+- `RMDEV_ENABLE_INS_MODULE=ON`
+
+## 已集成算法
+
+- 基于四元数扩展卡尔曼滤波的姿态更新算法( Wang
+  Hongxi, https://github.com/WangHongxi2001/RoboMaster-C-Board-INS-Example )
+
+## 使用建议
+
+- 在固定周期任务中调用更新逻辑
+- 确保 `timeline` 时间基准稳定
+- 将传感器原始数据先写入 `rmdev_device_model`，再进入姿态解算流程
+
+## 注意事项
+
+- 若未链接 `CMSISDSP`，该模块无法正常构建
+- 建议与板级传感器驱动一起联调验证时间戳与坐标约定
