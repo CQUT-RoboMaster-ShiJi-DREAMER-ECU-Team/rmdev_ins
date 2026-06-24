@@ -11,9 +11,6 @@
 
 #pragma once
 
-#include "emdevif/core/detail/config.hpp"
-
-#ifndef EMDEVIF_MODULE_INTERFACE_UNIT
     #include <cstdint>
     #include <cmath>
     #include <cstring>
@@ -26,9 +23,6 @@
     #include "emdevif/core/error_handler.hpp"
     #include "emdevif/core/concepts.hpp"
     #include "emdevif/timeline.hpp"
-#endif
-
-EMDEVIF_MODULE_EXPORT
 namespace rmdev {
 
 /**
