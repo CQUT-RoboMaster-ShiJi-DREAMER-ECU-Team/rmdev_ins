@@ -133,11 +133,11 @@
 
 // NOLINTBEGIN(*-use-nullptr)
 
-#include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
-
 #include <cstdlib>
 
 #include "emdevif/core/fatal_handler.h"
+
+#include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
 
 #if (defined(EMDEVIF_USE_MODULES) && EMDEVIF_USE_MODULES)
 import emdevif.core.error_handler;
@@ -363,8 +363,9 @@ void Kalman_Filter_Measure(KalmanFilter_t* kf)
 {
     // 矩阵H K R根据量测情况自动调整
     // matrix H K R auto adjustment
-    if (kf->UseAutoAdjustment != 0)
+    if (kf->UseAutoAdjustment != 0) {
         H_K_R_Adjustment(kf);
+    }
     else {
         memcpy(kf->z_data, kf->MeasuredVector, sizeof_float * kf->zSize);
         memset(kf->MeasuredVector, 0, sizeof_float * kf->zSize);
@@ -473,30 +474,40 @@ float* Kalman_Filter_Update(KalmanFilter_t* kf)
 {
     // 0. 获取量测信息
     Kalman_Filter_Measure(kf);
-    if (kf->User_Func0_f != NULL) kf->User_Func0_f(kf);
+    if (kf->User_Func0_f != NULL) {
+        kf->User_Func0_f(kf);
+    }
 
     // 先验估计
     // 1. xhat'(k)= A·xhat(k-1) + B·u
     Kalman_Filter_xhatMinusUpdate(kf);
-    if (kf->User_Func1_f != NULL) kf->User_Func1_f(kf);
+    if (kf->User_Func1_f != NULL) {
+        kf->User_Func1_f(kf);
+    }
 
     // 预测更新
     // 2. P'(k) = A·P(k-1)·AT + Q
     Kalman_Filter_PminusUpdate(kf);
-    if (kf->User_Func2_f != NULL) kf->User_Func2_f(kf);
+    if (kf->User_Func2_f != NULL) {
+        kf->User_Func2_f(kf);
+    }
 
     if (kf->MeasurementValidNum != 0 || kf->UseAutoAdjustment == 0) {
         // 量测更新
         // 3. K(k) = P'(k)·HT / (H·P'(k)·HT + R)
         Kalman_Filter_SetK(kf);
 
-        if (kf->User_Func3_f != NULL) kf->User_Func3_f(kf);
+        if (kf->User_Func3_f != NULL) {
+        kf->User_Func3_f(kf);
+    }
 
         // 融合
         // 4. xhat(k) = xhat'(k) + K(k)·(z(k) - H·xhat'(k))
         Kalman_Filter_xhatUpdate(kf);
 
-        if (kf->User_Func4_f != NULL) kf->User_Func4_f(kf);
+        if (kf->User_Func4_f != NULL) {
+        kf->User_Func4_f(kf);
+    }
 
         // 修正方差
         // 5. P(k) = (1-K(k)·H)·P'(k) ==> P(k) = P'(k)-K(k)·H·P'(k)
@@ -511,18 +522,23 @@ float* Kalman_Filter_Update(KalmanFilter_t* kf)
     }
 
     // 自定义函数,可以提供后处理等
-    if (kf->User_Func5_f != NULL) kf->User_Func5_f(kf);
+    if (kf->User_Func5_f != NULL) {
+        kf->User_Func5_f(kf);
+    }
 
     // 避免滤波器过度收敛
     // suppress filter excessive convergence
     for (uint8_t i = 0; i < kf->xhatSize; i++) {
-        if (kf->P_data[i * kf->xhatSize + i] < kf->StateMinVariance[i])
+        if (kf->P_data[i * kf->xhatSize + i] < kf->StateMinVariance[i]) {
             kf->P_data[i * kf->xhatSize + i] = kf->StateMinVariance[i];
+        }
     }
 
     memcpy(kf->FilteredValue, kf->xhat_data, sizeof_float * kf->xhatSize);
 
-    if (kf->User_Func6_f != NULL) kf->User_Func6_f(kf);
+    if (kf->User_Func6_f != NULL) {
+        kf->User_Func6_f(kf);
+    }
 
     return kf->FilteredValue;
 }
