@@ -5,7 +5,7 @@
 
 #pragma once
 #ifndef RMDEV_INS_HPP
-    #define RMDEV_INS_HPP
+#define RMDEV_INS_HPP
 
 #include "rmdev/ins/ins_base.hpp"
 

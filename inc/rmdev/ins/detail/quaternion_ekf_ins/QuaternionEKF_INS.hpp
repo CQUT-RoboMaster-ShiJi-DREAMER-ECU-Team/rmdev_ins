@@ -11,17 +11,17 @@
 
 #pragma once
 
-    #include <cmath>
-    #include <cstdint>
-    #include <cstring>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
 
-    #include <type_traits>
+#include <type_traits>
 
-    #include "emdevif/core/concepts.hpp"
-    #include "emdevif/core/error_handler.hpp"
-    #include "emdevif/timeline.hpp"
-    #include "rmdev/device_model/sensor/imu.hpp"
-    #include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
+#include "emdevif/core/concepts.hpp"
+#include "emdevif/core/error_handler.hpp"
+#include "emdevif/timeline.hpp"
+#include "rmdev/device_model/sensor/imu.hpp"
+#include "rmdev/ins/detail/quaternion_ekf_ins/kalman_filter.hpp"
 
 namespace rmdev {
 
@@ -723,7 +723,7 @@ void Ins<T, InsAlgorithm::QuaternionEKF>::IMU_QuaternionEKF_xhatUpdate(ins::deta
     kf->S.numRows = kf->R.numRows;
     kf->S.numCols = kf->R.numCols;
     kf->MatStatus = KALMAN_FILTER_Matrix_Add(&kf->temp_matrix1, &kf->R, &kf->S);  // S = H P'(k) HT + R
-    kf->MatStatus = KALMAN_FILTER_Matrix_Inverse(&kf->S, &kf->temp_matrix1);  // temp_matrix1 = inv(H·P'(k)·HT + R)
+    kf->MatStatus = KALMAN_FILTER_Matrix_Inverse(&kf->S, &kf->temp_matrix1);      // temp_matrix1 = inv(H·P'(k)·HT + R)
 
     q0 = kf->xhatminus_data[0];
     q1 = kf->xhatminus_data[1];

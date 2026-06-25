@@ -142,7 +142,7 @@
 #if (defined(EMDEVIF_USE_MODULES) && EMDEVIF_USE_MODULES)
 import emdevif.core.error_handler;
 #else
-    #include "emdevif/core/error_handler.hpp"
+#include "emdevif/core/error_handler.hpp"
 #endif
 
 #define KALMAN_FILTER_MALLOC(size)  malloc(size)
@@ -498,16 +498,16 @@ float* Kalman_Filter_Update(KalmanFilter_t* kf)
         Kalman_Filter_SetK(kf);
 
         if (kf->User_Func3_f != NULL) {
-        kf->User_Func3_f(kf);
-    }
+            kf->User_Func3_f(kf);
+        }
 
         // 融合
         // 4. xhat(k) = xhat'(k) + K(k)·(z(k) - H·xhat'(k))
         Kalman_Filter_xhatUpdate(kf);
 
         if (kf->User_Func4_f != NULL) {
-        kf->User_Func4_f(kf);
-    }
+            kf->User_Func4_f(kf);
+        }
 
         // 修正方差
         // 5. P(k) = (1-K(k)·H)·P'(k) ==> P(k) = P'(k)-K(k)·H·P'(k)

@@ -18,6 +18,6 @@ module;
 export module rmdev.ins;
 
 export namespace rmdev {
-    using ::rmdev::InsAlgorithm;
-    using ::rmdev::Ins;
-}
+using ::rmdev::Ins;
+using ::rmdev::InsAlgorithm;
+}  // namespace rmdev
